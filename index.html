@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f8f7f2">
+  <meta name="description" content="选择困难，转盘来帮忙。一个可以自定义菜单的每日吃饭随机转盘。">
+  <title>今天吃什么 · 把纠结交给转盘</title>
+  <style>
+    :root { --bg:#f8f7f2; --paper:#fffefa; --ink:#303d35; --muted:#7b8177; --orange:#df6944; --orange-dark:#bb4b2a; --green:#536950; --line:#e8e8de; --serif:Georgia,"Songti SC","SimSun",serif; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:"Microsoft YaHei","PingFang SC",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    button,input { font:inherit; }
+    button { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    button:disabled { cursor:not-allowed; }
+    button,a,input { outline-offset:5px; }
+    :focus-visible { outline:3px solid #c77649; }
+    button { color:inherit; }
+    a { color:inherit; text-decoration:none; }
+    svg { display:block; }
+    [hidden] { display:none !important; }
+    .shell { max-width:1160px; margin:0 auto; padding:0 34px; }
+    .header { height:94px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--line); }
+    .brand { display:flex; align-items:center; gap:11px; }
+    .brand-mark { width:39px; height:39px; background:var(--orange); color:#fff9ef; border-radius:13px; display:grid; place-items:center; transform:rotate(-7deg); }
+    .brand-name { font-size:20px; font-weight:800; letter-spacing:1px; }
+    .brand-name small { font-family:Georgia,serif; font-weight:400; color:var(--muted); font-size:11px; display:block; letter-spacing:2.2px; margin-top:3px; }
+    .header-right { display:flex; align-items:center; gap:24px; font-size:12px; color:var(--muted); }
+    .date { display:flex; align-items:center; gap:8px; }
+    .menu-link { display:flex; align-items:center; gap:7px; font-size:13px; color:var(--ink); padding:9px 0; }
+    .intro { text-align:center; padding:45px 0 29px; position:relative; }
+    .eyebrow { font-size:10px; font-weight:600; letter-spacing:3px; color:var(--green); margin:0 0 13px; }
+    h1 { font-size:43px; letter-spacing:1px; line-height:1.4; font-weight:800; margin:0; }
+    h1 span { color:var(--orange); position:relative; white-space:nowrap; }
+    h1 span::after { content:""; position:absolute; bottom:-6px; left:1px; width:98%; height:6px; border-top:2px solid #eaaa8e; border-radius:50%; transform:rotate(-2deg); }
+    .intro-description { font-size:13px; color:var(--muted); margin:18px 0 0; letter-spacing:.5px; }
+    .meal-switch { display:flex; justify-content:center; gap:6px; padding:5px; width:max-content; max-width:100%; margin:24px auto 0; border-radius:14px; background:#eeeee6; }
+    .meal-tab { display:flex; gap:7px; align-items:center; justify-content:center; padding:10px 25px; border:0; border-radius:10px; background:transparent; font-size:13px; color:#7d8178; white-space:nowrap; transition:background .2s,box-shadow .2s; }
+    .meal-tab[aria-pressed="true"] { background:var(--paper); color:var(--ink); box-shadow:0 2px 5px #303d350a; font-weight:700; }
+    .meal-tab:disabled { opacity:.6; }
+    .workspace { display:grid; grid-template-columns:minmax(0,1.75fr) minmax(290px,1fr); gap:22px; align-items:stretch; }
+    .wheel-card { background:var(--paper); border:1px solid var(--line); border-radius:23px; padding:22px 30px 24px; position:relative; overflow:hidden; }
+    .card-top { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .section-label { margin:0; font-size:13px; font-weight:700; letter-spacing:.5px; }
+    .little-label { font-size:10px; color:#94988d; letter-spacing:1.7px; }
+    .wheel-stage { position:relative; width:min(100%,390px); margin:17px auto 20px; aspect-ratio:1; }
+    .wheel-stage::before { content:""; position:absolute; inset:6%; border-radius:50%; background:#d6c0a3; filter:blur(22px); opacity:.22; transform:translateY(15px); }
+    .wheel-rim { position:absolute; inset:0; border-radius:50%; background:#fffaf0; border:1px solid #e8dece; padding:10px; box-shadow:0 7px 0 #e9e5d9,0 12px 24px #61533b0d; }
+    .wheel-disc { width:100%; height:100%; border-radius:50%; overflow:hidden; will-change:transform; }
+    #wheel { width:100%; height:100%; overflow:visible; }
+    .pointer { position:absolute; z-index:3; top:-7px; left:50%; transform:translateX(-50%); filter:drop-shadow(0 3px 1px #783c3120); }
+    .wheel-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:80px; height:80px; border:7px solid #fffaf0; border-radius:50%; background:var(--ink); color:#fffaf0; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 2px 8px #45513925; }
+    .wheel-center span { font-family:Georgia,serif; font-size:19px; font-style:italic; }
+    .wheel-center small { font-size:9px; margin-top:2px; letter-spacing:2px; }
+    .sparkle { position:absolute; color:#adba9a; font-family:Georgia,serif; font-size:27px; pointer-events:none; }
+    .sparkle-one { left:-20px; top:22%; }
+    .sparkle-two { right:-15px; bottom:17%; font-size:20px; color:#dda77d; }
+    .spin-button { display:flex; align-items:center; justify-content:center; gap:10px; width:230px; max-width:100%; min-height:50px; margin:0 auto; border:1px solid #c65935; border-radius:13px; background:var(--orange); color:white; font-size:15px; font-weight:700; box-shadow:0 4px 0 #bd4f2c; transition:background .2s,transform .2s,box-shadow .2s; }
+    .spin-button:hover:not(:disabled) { background:#d75e36; transform:translateY(-1px); box-shadow:0 5px 0 #bd4f2c; }
+    .spin-button:active:not(:disabled) { transform:translateY(3px); box-shadow:0 1px 0 #bd4f2c; }
+    .spin-button:disabled { opacity:.75; }
+    .spin-button.is-spinning svg { animation:turn 1.5s linear infinite; }
+    .wheel-note { margin:15px 0 0; text-align:center; font-size:11px; color:var(--muted); }
+    .side-column { display:flex; flex-direction:column; gap:16px; }
+    .result-card { background:#eff1e7; border:1px solid #e4e8da; border-radius:23px; padding:23px 25px 25px; text-align:center; flex:1; position:relative; overflow:hidden; min-height:357px; display:flex; flex-direction:column; align-items:center; }
+    .result-top { width:100%; display:flex; justify-content:space-between; align-items:center; }
+    .result-top .little-label { color:#8b967d; font-size:9px; }
+    .status { display:inline-flex; align-items:center; gap:6px; color:#6d7c60; font-size:10px; }
+    .status::before { content:""; width:5px; height:5px; border-radius:50%; background:#849575; }
+    .food-art { width:145px; height:126px; margin:20px auto 8px; flex-shrink:0; position:relative; }
+    .result-emoji { height:126px; margin:20px auto 8px; display:grid; place-items:center; font-size:80px; line-height:1; filter:drop-shadow(0 8px 0 #50663e0a); }
+    .result-kicker { margin:0 0 9px; font-size:11px; color:#849076; letter-spacing:2px; }
+    .result-title { margin:0; font-size:24px; font-weight:700; line-height:1.5; overflow-wrap:anywhere; }
+    .result-description { font-size:12px; color:#7c8772; line-height:1.8; margin:10px 0 0; max-width:240px; }
+    .result-actions { width:100%; display:flex; align-items:center; gap:8px; margin-top:21px; }
+    .confirm-button { flex:1; border:0; border-radius:10px; background:var(--green); color:#fff; font-size:12px; min-height:42px; transition:background .2s; }
+    .confirm-button:hover:not(:disabled) { background:#40593d; }
+    .confirm-button:disabled { background:#849277; }
+    .retry-button { min-height:42px; padding:0 14px; background:transparent; border:1px solid #ced5c1; border-radius:10px; font-size:12px; }
+    .result-placeholder { width:100%; margin-top:auto; padding-top:24px; font-size:10px; letter-spacing:1px; color:#98a18c; }
+    .history-card { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:20px 22px; }
+    .history-heading { display:flex; justify-content:space-between; align-items:center; }
+    .history-heading h2 { margin:0; font-size:12px; font-weight:600; }
+    .history-count { font-family:Georgia,serif; font-size:12px; color:#9a9e90; }
+    .history-empty { display:flex; align-items:center; gap:10px; margin:18px 0 3px; font-size:11px; line-height:1.9; color:#92968a; }
+    .history-empty svg { color:#a0a88f; flex-shrink:0; }
+    .history-list { list-style:none; margin:13px 0 0; padding:0; max-height:135px; overflow:auto; }
+    .history-item { display:flex; align-items:center; gap:9px; padding:9px 0; font-size:12px; border-top:1px dashed var(--line); }
+    .history-item:first-child { border-top:0; }
+    .history-food { flex:1; overflow-wrap:anywhere; }
+    .history-meal { color:var(--muted); font-size:10px; white-space:nowrap; }
+    .menu-card { margin-top:23px; background:var(--paper); border:1px solid var(--line); border-radius:20px; padding:23px 28px 22px; scroll-margin-top:25px; }
+    .menu-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .menu-heading-left { display:flex; align-items:center; gap:10px; }
+    .menu-heading h2 { font-size:14px; margin:0; }
+    .count-badge { background:#f1f1e9; padding:3px 7px; color:#8c9182; font-size:10px; border-radius:5px; }
+    .text-button { background:transparent; padding:5px 0 5px 10px; border:0; font-size:11px; color:#7f8676; }
+    .text-button:hover:not(:disabled) { color:var(--orange-dark); }
+    .text-button:disabled { opacity:.45; }
+    .menu-description { font-size:11px; color:var(--muted); margin:9px 0 17px; }
+    .menu-bottom { display:flex; align-items:flex-start; gap:25px; }
+    .food-chips { display:flex; flex:1; flex-wrap:wrap; gap:9px; }
+    .food-chip { min-height:35px; padding:4px 4px 4px 11px; display:flex; align-items:center; gap:6px; font-size:11px; background:#f7f5ee; border:1px solid #eeebe0; border-radius:8px; }
+    .food-chip > span:first-child { font-size:15px; }
+    .remove-food { border:0; background:transparent; padding:0; width:25px; min-height:25px; color:#a4a395; border-radius:5px; font-size:16px; line-height:1; }
+    .remove-food:hover:not(:disabled) { background:#efe1d5; color:#a64f34; }
+    .remove-food:disabled { opacity:.3; }
+    .add-form { width:248px; flex-shrink:0; display:flex; gap:7px; margin:0; }
+    .add-input { background:#fffefa; border:1px solid #dfdfd2; border-radius:9px; min-height:38px; width:100%; min-width:0; padding:0 12px; font-size:11px; color:var(--ink); }
+    .add-input::placeholder { color:#a0a294; }
+    .add-button { border:1px solid #d8dccb; background:#eff1e8; border-radius:9px; padding:0 12px; font-size:19px; color:#677956; }
+    .add-button:hover:not(:disabled) { background:#e2e8d8; }
+    .add-button:disabled { opacity:.4; }
+    .footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:24px 2px 28px; font-size:10px; color:#96998d; letter-spacing:.3px; }
+    .footer-left { display:flex; align-items:center; gap:6px; }
+    .footer-right { font-family:Georgia,serif; font-style:italic; font-size:12px; }
+    .toast { position:fixed; bottom:25px; left:50%; transform:translate(-50%,15px); opacity:0; pointer-events:none; z-index:20; color:#fffdf5; background:#354236; box-shadow:0 5px 25px #303d3520; border-radius:12px; padding:13px 20px; font-size:12px; max-width:calc(100vw - 32px); width:max-content; transition:opacity .2s,transform .2s; }
+    .toast.visible { transform:translate(-50%,0); opacity:1; }
+    .confetti { position:absolute; top:-15px; width:7px; height:12px; border-radius:2px; pointer-events:none; animation:fall 1.9s ease-in forwards; z-index:3; }
+    .pop { animation:pop .4s ease-out; }
+    @keyframes turn { to { transform:rotate(360deg); } }
+    @keyframes pop { from { opacity:.4; transform:translateY(7px) scale(.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+    @keyframes fall { to { transform:translate(var(--drift),420px) rotate(var(--twist)); opacity:0; } }
+    @media (min-width:1250px) { .shell { padding:0 25px; } }
+    @media (max-width:900px) {
+      .shell { padding:0 24px; }
+      .workspace { grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr); gap:16px; }
+      .wheel-card { padding:21px 20px 24px; }
+      .wheel-stage { margin-top:27px; margin-bottom:28px; }
+      .result-card { padding:22px 18px; min-height:340px; }
+      .result-title { font-size:21px; }
+      .menu-bottom { flex-direction:column; gap:15px; }
+      .add-form { width:100%; max-width:340px; }
+      .sparkle { display:none; }
+    }
+    @media (max-width:660px) {
+      .shell { padding:0 18px; }
+      .header { height:79px; }
+      .brand-name { font-size:17px; }
+      .brand-name small { font-size:9px; letter-spacing:1.6px; }
+      .brand-mark { width:35px; height:35px; border-radius:11px; }
+      .header-right { gap:12px; }
+      .date { display:none; }
+      .menu-link { font-size:11px; }
+      .intro { padding:34px 0 24px; }
+      .eyebrow { font-size:9px; letter-spacing:2.5px; }
+      h1 { font-size:32px; letter-spacing:0; }
+      .intro-description { font-size:11px; margin-top:16px; }
+      .meal-switch { margin-top:23px; width:100%; max-width:360px; gap:4px; }
+      .meal-tab { flex:1; padding:9px 8px; font-size:12px; }
+      .workspace { grid-template-columns:1fr; }
+      .wheel-card { padding:20px 21px 23px; }
+      .wheel-stage { width:min(100%,350px); margin:23px auto 24px; }
+      .wheel-center { width:72px; height:72px; border-width:6px; }
+      .side-column { gap:16px; }
+      .result-card { min-height:0; padding:20px 24px 23px; }
+      .food-art,.result-emoji { margin:10px auto 4px; height:105px; }
+      .food-art { width:122px; }
+      .result-emoji { font-size:68px; }
+      .result-description { max-width:100%; margin-top:6px; }
+      .result-placeholder { padding-top:15px; }
+      .result-actions { max-width:350px; margin-top:18px; }
+      .history-card { padding:18px 22px; }
+      .menu-card { margin-top:16px; padding:21px; }
+      .menu-description { line-height:1.8; }
+      .add-form { max-width:none; }
+      .footer { align-items:flex-start; padding:21px 0; font-size:9px; }
+      .footer-right { font-size:10px; white-space:nowrap; }
+    }
+    @media (max-width:360px) { h1 { font-size:28px; } .meal-tab { padding:9px 5px; gap:5px; } .little-label { letter-spacing:1px; font-size:9px; } .shell { padding:0 12px; } }
+    @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="header">
+      <a class="brand" href="#" aria-label="今天吃什么，返回顶部">
+        <span class="brand-mark" aria-hidden="true"><svg width="27" height="27" viewBox="0 0 32 32" fill="none"><path d="M5 15h22c-.5 7-4.7 10-11 10S5.5 22 5 15Z" fill="currentColor"/><path d="M11 28h10M11 5c-3 3 3 3 0 6m6-8c-3 3 3 4 0 7m6-5c-3 3 3 3 0 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+        <span class="brand-name">今天吃什么<small>THE DAILY BITE</small></span>
+      </a>
+      <div class="header-right">
+        <span class="date"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M8 3v4m8-4v4M4 11h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><time id="today-date"></time></span>
+        <a class="menu-link" href="#my-menu"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 5h12M8 12h12M8 19h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="4" cy="5" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="19" r="1" fill="currentColor"/></svg>我的菜单</a>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow">A LITTLE SPIN, A HAPPY MEAL</p>
+        <h1 id="page-title">把纠结交给<span>转盘。</span></h1>
+        <p class="intro-description">人生已经有很多选择了，今天吃什么，就让好运决定。</p>
+        <div class="meal-switch" role="group" aria-label="选择餐次或团建">
+          <button class="meal-tab" type="button" data-meal="breakfast" aria-pressed="false"><span aria-hidden="true">☀️</span>早餐</button>
+          <button class="meal-tab" type="button" data-meal="lunch" aria-pressed="true"><span aria-hidden="true">🍚</span>午餐</button>
+          <button class="meal-tab" type="button" data-meal="dinner" aria-pressed="false"><span aria-hidden="true">🌙</span>晚餐</button>
+          <button class="meal-tab" type="button" data-meal="group" aria-pressed="false"><span aria-hidden="true">🎉</span>团建</button>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <section class="wheel-card" aria-labelledby="wheel-heading">
+          <div class="card-top"><h2 class="section-label" id="wheel-heading">今日午餐候选</h2><span class="little-label">FOLLOW YOUR APPETITE</span></div>
+          <div class="wheel-stage">
+            <span class="sparkle sparkle-one" aria-hidden="true">✳</span><span class="sparkle sparkle-two" aria-hidden="true">✧</span>
+            <div class="wheel-rim"><div class="wheel-disc" id="wheel-disc"><svg id="wheel" viewBox="0 0 400 400" role="img" aria-label="午餐随机选择转盘"></svg></div></div>
+            <svg class="pointer" width="33" height="44" viewBox="0 0 33 44" aria-hidden="true"><path d="M3 8C3 3 7 1 16.5 1S30 3 30 8c0 8-13.5 32-13.5 32S3 16 3 8Z" fill="#d7603b" stroke="#fffaf0" stroke-width="3"/><circle cx="16.5" cy="11" r="4" fill="#fff0d9"/></svg>
+            <div class="wheel-center" aria-hidden="true"><span>Yum!</span><small>好好吃饭</small></div>
+          </div>
+          <button class="spin-button" id="spin-button" type="button"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.2 7a7 7 0 0 1 12.4 0L20 12M4 12l1.4 5A7 7 0 0 0 18 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span id="spin-label">转一下，开饭！</span></button>
+          <p class="wheel-note" id="wheel-note">7 个美味选项，每一份都有机会</p>
+        </section>
+
+        <aside class="side-column">
+          <section class="result-card" id="result-card" aria-labelledby="result-title">
+            <div class="result-top"><span class="section-label">命中你的美味</span><span class="status" id="result-status">等待开转</span></div>
+            <div class="food-art" id="food-art" aria-hidden="true">
+              <svg viewBox="0 0 160 140" fill="none"><circle cx="80" cy="68" r="54" fill="#e3e8d5"/><path d="m122 26 6-8m4 20 9-2M34 27l-5-6" stroke="#abb892" stroke-width="2" stroke-linecap="round"/><ellipse cx="81" cy="117" rx="42" ry="5" fill="#d5dcc4"/><path d="M50 61c-3-14 7-23 18-20 4-17 28-20 33-2 14-1 23 9 18 22" fill="#fffdf4"/><path d="M55 60c-5-14 5-22 14-17m8-4c8-5 16-2 18 5" stroke="#ebe7d4" stroke-width="2" stroke-linecap="round"/><path d="M39 65c-1-15 17-24 28-14l5 15" fill="#94ae76"/><path d="m45 64 8-9m4 11 4-9" stroke="#6f8a55" stroke-width="2" stroke-linecap="round"/><path d="M95 65c-1-14 9-23 18-17 12-4 20 8 14 18" fill="#7e9b62"/><path d="m111 64 3-10" stroke="#597d47" stroke-width="2" stroke-linecap="round"/><ellipse cx="87" cy="64" rx="21" ry="17" fill="#fff7df" transform="rotate(-14 87 64)"/><circle cx="87" cy="61" r="10" fill="#edbb54"/><path d="m117 60 20-41m-12 44 23-39" stroke="#9a7250" stroke-width="4" stroke-linecap="round"/><path d="M31 67h100c-2 26-20 44-50 44S33 93 31 67Z" fill="#d77850"/><path d="M32 67h98" stroke="#e4926e" stroke-width="5" stroke-linecap="round"/><path d="M48 79c4 11 10 16 18 20" stroke="#e8a17c" stroke-width="4" stroke-linecap="round"/><path d="M70 112h23" stroke="#b35b3c" stroke-width="5" stroke-linecap="round"/><path d="M72 85v3m19-3v3" stroke="#783f31" stroke-width="3" stroke-linecap="round"/><path d="M78 94q4 4 8 0" stroke="#783f31" stroke-width="2" stroke-linecap="round"/><path d="M62 26c-7-7 7-9 0-16m21 11c-6-7 6-9 1-15" stroke="#a4b38d" stroke-width="2" stroke-linecap="round"/></svg>
+            </div>
+            <div class="result-emoji" id="result-emoji" aria-hidden="true" hidden></div>
+            <div id="result-copy" aria-live="polite" aria-atomic="true"><p class="result-kicker" id="result-kicker">今日份的小期待</p><h2 class="result-title" id="result-title">下一顿，充满期待。</h2><p class="result-description" id="result-description">轻轻转一下，<br>让一顿好饭治愈今天的选择困难。</p></div>
+            <div class="result-actions" id="result-actions" hidden><button class="confirm-button" id="confirm-button" type="button">就吃这个 ✓</button><button class="retry-button" id="retry-button" type="button">再转一次</button></div>
+            <div class="result-placeholder" id="result-placeholder">每一次开饭，都值得认真对待</div>
+          </section>
+
+          <section class="history-card" aria-labelledby="history-heading">
+            <div class="history-heading"><h2 id="history-heading">今天的好好吃饭记录</h2><span class="history-count" id="history-count">0 / DAY</span></div>
+            <div class="history-empty" id="history-empty"><svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden="true"><path d="M8 5h16v23l-4-2-4 2-4-2-4 2V5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M12 12h8m-8 5h8m-8 5h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span>还没有记录，<br>选好后点「就吃这个」留下美味。</span></div>
+            <ul class="history-list" id="history-list" hidden></ul>
+          </section>
+        </aside>
+      </div>
+
+      <section class="menu-card" id="my-menu" aria-labelledby="menu-heading">
+        <div class="menu-heading"><div class="menu-heading-left"><h2 id="menu-heading">我的午餐菜单</h2><span class="count-badge" id="menu-count">7 / 12</span></div><button class="text-button" id="reset-menu" type="button">↺ 恢复默认</button></div>
+        <p class="menu-description" id="menu-description">把喜欢的放进来，把不想吃的划掉。你的胃，你做主。</p>
+        <div class="menu-bottom"><div class="food-chips" id="food-chips"></div><form class="add-form" id="add-form"><input class="add-input" id="add-input" aria-label="添加想吃的美食" autocomplete="off" maxlength="12" placeholder="还有什么想吃的？" required><button class="add-button" id="add-button" type="submit" aria-label="添加到当前菜单">+</button></form></div>
+      </section>
+    </main>
+    <footer class="footer"><span class="footer-left"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 21S3 15 3 8a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 7-9 13-9 13Z" stroke="currentColor" stroke-width="1.5"/></svg>好好吃饭，是每天最简单的幸福。</span><span class="footer-right">Less deciding. More enjoying.</span></footer>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <noscript><p style="text-align:center">请启用浏览器的 JavaScript，才能使用随机转盘。</p></noscript>
+
+  <script>
+    (() => {
+      'use strict';
+      const $ = id => document.getElementById(id);
+      const STORAGE_KEY = 'daily-bite-v2';
+      const LEGACY_STORAGE_KEY = 'daily-bite-v1';
+      const MENU_VERSION = 2;
+      const MEALS = { breakfast:'早餐', lunch:'午餐', dinner:'晚餐', group:'团建' };
+      const COLORS = ['#edc6a7','#e7d9ae','#c9d7b7','#efd9c3','#dedfaf','#e9b995','#cad9c5','#f0e3c3','#d6cbb1','#e5c9b6','#c4d2b5','#e7daa9'];
+      const SHARED_FOODS = [
+        { name:'牛肉面', emoji:'🍜', description:'热汤、劲道的面和大块牛肉，给忙碌的一天补充一点满足。' },
+        { name:'麻辣烫', emoji:'🥘', description:'喜欢什么就挑什么，把今天的小快乐装进同一个碗里。' },
+        { name:'饺子', emoji:'🥟', description:'蘸一点醋，咬一口鲜。简简单单，也能吃出家的味道。' },
+        { name:'汉堡薯条', emoji:'🍔', description:'今天就开心地大口咬下去吧，给忙碌的自己放个小假。' }
+      ];
+      const DINNER_ADDITIONS = [
+        ...SHARED_FOODS,
+        { name:'猪脚饭', emoji:'🍖', description:'软糯的猪脚配上米饭，淋一点卤汁，今晚吃得香香的。' }
+      ];
+      const DEFAULTS = {
+        breakfast:[
+          { name:'豆浆油条', emoji:'🥛', description:'一口酥脆，一口温热。熟悉的早餐，也是一天的小确幸。' },
+          { name:'煎饼果子', emoji:'🌯', description:'热乎的饼皮裹住满满馅料，新的一天就从这一口开始。' },
+          { name:'小笼包', emoji:'🥟', description:'慢慢咬开，先尝一口鲜汤。早起的幸福藏在小笼里。' },
+          { name:'鸡蛋三明治', emoji:'🥪', description:'柔软面包，香香鸡蛋。简单的一餐，也能元气满满。' },
+          { name:'皮蛋瘦肉粥', emoji:'🥣', description:'用一碗暖粥唤醒清晨，今天也要好好照顾自己。' },
+          { name:'肠粉', emoji:'🍥', description:'软滑的肠粉配一勺酱汁，清晨也可以有滋有味。' },
+          { name:'汤粉', emoji:'🍜', description:'嗦一口热乎乎的粉，让早晨多一点踏实的满足。' },
+          { name:'牛奶燕麦', emoji:'🥣', description:'给早晨留一点从容，让一碗温热的燕麦陪你慢慢醒来。' }
+        ],
+        lunch:[
+          { name:'黄焖鸡米饭', emoji:'🍗', description:'鸡肉吸饱浓郁汤汁，再配一碗米饭。这顿，踏踏实实地吃好。' },
+          ...SHARED_FOODS,
+          { name:'轻食沙拉', emoji:'🥗', description:'让缤纷蔬菜和喜欢的配料相遇，午间也来一点清新。' },
+          { name:'番茄鸡蛋饭', emoji:'🍅', description:'酸酸甜甜的熟悉味道，拌进米饭里，就是朴素的幸福。' }
+        ],
+        dinner:[
+          { name:'家常小炒（呷饭）', emoji:'🥬', description:'锅气和米饭最是合拍，晚餐就交给熟悉的家常味道。' },
+          { name:'酸菜鱼', emoji:'🐟', description:'鲜嫩鱼肉配酸香汤底，今晚的米饭已经准备好了。' },
+          { name:'披萨', emoji:'🍕', description:'拉丝芝士和丰富配料，快乐有时候就是手里的这一角。' },
+          { name:'馄饨', emoji:'🥟', description:'一碗鲜汤，几颗饱满馄饨。吃得暖暖的，今晚也舒舒服服。' },
+          ...DINNER_ADDITIONS
+        ],
+        group:[
+          { name:'火锅', emoji:'🍲', description:'约上大家围坐一锅，把喜欢的菜慢慢涮，把开心的事慢慢聊。' },
+          { name:'烤肉', emoji:'🥩', description:'一起烤肉、一起分享，留足时间，让这场聚餐热热闹闹。' }
+        ]
+      };
+      const clone = value => JSON.parse(JSON.stringify(value));
+      const state = { menuVersion:MENU_VERSION, meal:'lunch', menus:clone(DEFAULTS), history:[] };
+      let spinning = false;
+      let rotation = 0;
+      let chosen = null;
+      let toastTimer;
+      let storageAvailable = true;
+      let displayedDay = '';
+
+      function dayKey(date = new Date()) {
+        return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+      }
+
+      function cleanFood(food) {
+        if (!food || typeof food.name !== 'string' || !food.name.trim()) return null;
+        return { name:food.name.trim().slice(0,12), emoji:typeof food.emoji === 'string' ? food.emoji.slice(0,12) : '🍽️', description:typeof food.description === 'string' ? food.description.slice(0,180) : '是你亲手放进菜单的美味。今天，就听自己的胃一次。' };
+      }
+
+      function load() {
+        try {
+          localStorage.removeItem(LEGACY_STORAGE_KEY);
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (!saved || typeof saved !== 'object') return;
+          if (Object.hasOwn(MEALS,saved.meal)) state.meal = saved.meal;
+          for (const meal of Object.keys(MEALS)) {
+            if (!Array.isArray(saved.menus?.[meal])) continue;
+            const names = new Set();
+            const foods = saved.menus[meal].map(cleanFood).filter(food => {
+              if (!food || names.has(food.name)) return false;
+              names.add(food.name); return true;
+            }).slice(0,12);
+            if (foods.length >= 2) state.menus[meal] = foods;
+          }
+          if (Array.isArray(saved.history)) state.history = saved.history.filter(item => item && Object.hasOwn(MEALS,item.meal) && typeof item.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(item.date) && cleanFood(item)).slice(0,100).map(item => ({ ...cleanFood(item), meal:item.meal, date:item.date }));
+        } catch { storageAvailable = false; }
+      }
+
+      function save() {
+        try { localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); storageAvailable = true; }
+        catch { storageAvailable = false; }
+      }
+
+      function toast(message) {
+        clearTimeout(toastTimer);
+        $('toast').textContent = message;
+        $('toast').classList.add('visible');
+        toastTimer = setTimeout(() => $('toast').classList.remove('visible'),3200);
+      }
+
+      function randomIndex(length) {
+        // Rejection sampling gives every slice the same probability.
+        if (globalThis.crypto?.getRandomValues) {
+          const buffer = new Uint32Array(1);
+          const limit = 4294967296 - (4294967296 % length);
+          do { crypto.getRandomValues(buffer); } while (buffer[0] >= limit);
+          return buffer[0] % length;
+        }
+        return Math.floor(Math.random()*length);
+      }
+
+      function svgElement(tag,attributes,text) {
+        const element = document.createElementNS('http://www.w3.org/2000/svg',tag);
+        for (const [name,value] of Object.entries(attributes)) element.setAttribute(name,value);
+        if (text !== undefined) element.textContent = text;
+        return element;
+      }
+
+      function drawWheel() {
+        const foods = state.menus[state.meal];
+        const wheel = $('wheel');
+        wheel.replaceChildren();
+        wheel.setAttribute('aria-label',`${MEALS[state.meal]}转盘，候选：${foods.map(food=>food.name).join('、')}`);
+        rotation = 0;
+        $('wheel-disc').style.transform = 'rotate(0deg)';
+        const step = 360/foods.length;
+        const point = angle => [200+199*Math.cos(angle*Math.PI/180),200+199*Math.sin(angle*Math.PI/180)];
+        foods.forEach((food,index) => {
+          const center = index*step-90;
+          const start = point(center-step/2);
+          const end = point(center+step/2);
+          wheel.append(svgElement('path',{ d:`M200 200L${start.join(' ')}A199 199 0 0 1 ${end.join(' ')}Z`,fill:COLORS[index],stroke:'#fffaf0','stroke-width':1.3 }));
+          const label = svgElement('g',{ transform:`rotate(${index*step} 200 200)` });
+          label.append(svgElement('text',{ x:200,y:78,'text-anchor':'middle','dominant-baseline':'middle','font-size':foods.length>10 ? 26 : 30,'font-family':'"Segoe UI Emoji","Apple Color Emoji",sans-serif' },food.emoji));
+          const maxLabel = foods.length > 10 ? 4 : foods.length > 8 ? 5 : 6;
+          const annotatedName = food.name.match(/^(.+)（(.+)）$/);
+          const labelName = annotatedName ? annotatedName[1] : food.name;
+          const displayName = labelName.length > maxLabel ? labelName.slice(0,maxLabel-1)+'…' : labelName;
+          label.append(svgElement('text',{ x:200,y:111,'text-anchor':'middle','dominant-baseline':'middle','font-size':foods.length>8 ? 11 : 13,'font-weight':600,fill:'#4b4d39','font-family':'"Microsoft YaHei","PingFang SC",sans-serif' },displayName));
+          if (annotatedName) label.append(svgElement('text',{ x:200,y:127,'text-anchor':'middle','dominant-baseline':'middle','font-size':9,fill:'#62634d' },annotatedName[2].slice(0,4)));
+          wheel.append(label);
+        });
+      }
+
+      function renderMenu() {
+        const foods = state.menus[state.meal];
+        $('wheel-heading').textContent = `今日${MEALS[state.meal]}候选`;
+        $('menu-heading').textContent = `我的${MEALS[state.meal]}菜单`;
+        $('menu-description').textContent = state.meal === 'group' ? '留点时间，约上大家。火锅、烤肉，适合多人慢慢吃的都放这里。' : '把喜欢的放进来，把不想吃的划掉。你的胃，你做主。';
+        $('menu-count').textContent = `${foods.length} / 12`;
+        $('wheel-note').textContent = `${foods.length} 个美味选项，每一份都有机会`;
+        $('food-chips').replaceChildren();
+        foods.forEach((food,index) => {
+          const chip = document.createElement('div');
+          chip.className = 'food-chip';
+          const emoji = document.createElement('span');
+          emoji.textContent = food.emoji;
+          emoji.setAttribute('aria-hidden','true');
+          const name = document.createElement('span');
+          name.textContent = food.name;
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'remove-food';
+          remove.textContent = '×';
+          remove.setAttribute('aria-label',`移除${food.name}`);
+          remove.disabled = foods.length <= 2 || spinning;
+          remove.title = foods.length <= 2 ? '至少保留 2 个选项' : `移除${food.name}`;
+          remove.addEventListener('click',() => {
+            if (spinning || state.menus[state.meal].length <= 2) return;
+            foods.splice(index,1);
+            updateCandidates();
+            const remaining = $('food-chips').querySelectorAll('button:not(:disabled)');
+            (remaining[Math.min(index,remaining.length-1)] || $('add-input')).focus({preventScroll:true});
+          });
+          chip.append(emoji,name,remove);
+          $('food-chips').append(chip);
+        });
+        $('add-input').disabled = spinning || foods.length >= 12;
+        $('add-button').disabled = spinning || foods.length >= 12;
+        $('add-input').placeholder = foods.length >= 12 ? '菜单已满，先移除一个选项' : '还有什么想吃的？';
+        document.querySelectorAll('.meal-tab').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.meal === state.meal)));
+      }
+
+      function resetResult() {
+        chosen = null;
+        $('food-art').hidden = false;
+        $('result-emoji').hidden = true;
+        $('result-status').textContent = '等待开转';
+        $('result-kicker').textContent = '今日份的小期待';
+        $('result-title').textContent = '下一顿，充满期待。';
+        $('result-description').textContent = '轻轻转一下，让一顿好饭治愈今天的选择困难。';
+        $('result-actions').hidden = true;
+        $('result-placeholder').hidden = false;
+        $('spin-label').textContent = '转一下，开饭！';
+      }
+
+      function updateCandidates() { save(); renderMenu(); drawWheel(); resetResult(); }
+
+      function setSpinning(value) {
+        spinning = value;
+        $('wheel-disc').setAttribute('aria-busy',String(value));
+        $('spin-button').disabled = value;
+        $('spin-button').classList.toggle('is-spinning',value);
+        $('reset-menu').disabled = value;
+        document.querySelectorAll('.meal-tab').forEach(button => { button.disabled = value; });
+        renderMenu();
+      }
+
+      function celebrate() {
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        for (let i=0;i<19;i++) {
+          const bit = document.createElement('i');
+          bit.className = 'confetti';
+          bit.setAttribute('aria-hidden','true');
+          bit.style.left = `${8+Math.random()*84}%`;
+          bit.style.background = ['#df8c63','#abbc89','#e0c276','#c8aa8d'][i%4];
+          bit.style.animationDelay = `${Math.random()*.3}s`;
+          bit.style.setProperty('--drift',`${Math.random()*100-50}px`);
+          bit.style.setProperty('--twist',`${Math.random()*560-280}deg`);
+          $('result-card').append(bit);
+          bit.addEventListener('animationend',() => bit.remove(),{once:true});
+          setTimeout(() => bit.remove(),2600);
+        }
+      }
+
+      async function spin() {
+        if (spinning) return;
+        const foods = state.menus[state.meal];
+        if (foods.length < 2) return;
+        const index = randomIndex(foods.length);
+        const step = 360/foods.length;
+        const target = (360-index*step)%360;
+        const current = ((rotation%360)+360)%360;
+        const destination = rotation+360*5+(target-current+360)%360;
+        chosen = null;
+        setSpinning(true);
+        $('spin-label').textContent = '美味马上揭晓…';
+        $('result-status').textContent = '好运转动中';
+        $('result-kicker').textContent = '稍等一下，美味在路上';
+        $('result-title').textContent = '让灵感转一会儿';
+        $('result-description').textContent = '生活偶尔需要一点随机的惊喜。';
+        $('food-art').hidden = false;
+        $('result-emoji').hidden = true;
+        $('result-actions').hidden = true;
+        $('result-placeholder').hidden = false;
+        const duration = matchMedia('(prefers-reduced-motion: reduce)').matches ? 100 : 4400;
+        try {
+          const animation = $('wheel-disc').animate([{transform:`rotate(${rotation}deg)`},{transform:`rotate(${destination}deg)`}],{ duration,easing:'cubic-bezier(0.12,0.72,0.12,1)',fill:'forwards' });
+          await animation.finished;
+          rotation = destination%360;
+          $('wheel-disc').style.transform = `rotate(${rotation}deg)`;
+          animation.cancel();
+        } catch {
+          rotation = destination%360;
+          $('wheel-disc').style.transform = `rotate(${rotation}deg)`;
+        }
+        chosen = { ...foods[index],meal:state.meal,confirmed:false };
+        setSpinning(false);
+        $('spin-label').textContent = '再转一下，换个口味';
+        $('food-art').hidden = true;
+        $('result-emoji').hidden = false;
+        $('result-emoji').textContent = chosen.emoji;
+        $('result-status').textContent = '美味已送达';
+        $('result-kicker').textContent = `今天${MEALS[state.meal]}，就决定是你了`;
+        $('result-title').textContent = chosen.name;
+        $('result-description').textContent = chosen.description;
+        $('result-actions').hidden = false;
+        $('result-placeholder').hidden = true;
+        $('confirm-button').disabled = false;
+        $('confirm-button').textContent = '就吃这个 ✓';
+        $('result-copy').classList.remove('pop');
+        void $('result-copy').offsetWidth;
+        $('result-copy').classList.add('pop');
+        celebrate();
+        $('confirm-button').focus({preventScroll:true});
+      }
+
+      function renderHistory() {
+        const today = dayKey();
+        const items = state.history.filter(item => item.date === today);
+        $('history-count').textContent = `${items.length} / DAY`;
+        $('history-empty').hidden = items.length > 0;
+        $('history-list').hidden = items.length === 0;
+        $('history-list').replaceChildren();
+        items.forEach(item => {
+          const row = document.createElement('li');
+          row.className = 'history-item';
+          const emoji = document.createElement('span');
+          emoji.textContent = item.emoji;
+          emoji.setAttribute('aria-hidden','true');
+          const name = document.createElement('span');
+          name.className = 'history-food';
+          name.textContent = item.name;
+          const meal = document.createElement('span');
+          meal.className = 'history-meal';
+          meal.textContent = MEALS[item.meal];
+          row.append(emoji,name,meal);
+          $('history-list').append(row);
+        });
+      }
+
+      function refreshDate() {
+        const date = new Date();
+        if (displayedDay === dayKey(date)) return;
+        displayedDay = dayKey(date);
+        $('today-date').dateTime = displayedDay;
+        $('today-date').textContent = `${date.getMonth()+1}月${date.getDate()}日 · ${['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][date.getDay()]}`;
+        renderHistory();
+      }
+
+      document.querySelectorAll('.meal-tab').forEach(button => button.addEventListener('click',() => {
+        if (spinning || state.meal === button.dataset.meal) return;
+        state.meal = button.dataset.meal;
+        $('add-input').value = '';
+        updateCandidates();
+      }));
+      $('spin-button').addEventListener('click',spin);
+      $('retry-button').addEventListener('click',spin);
+      $('confirm-button').addEventListener('click',() => {
+        if (!chosen || spinning || chosen.confirmed) return;
+        chosen.confirmed = true;
+        state.history.unshift({ name:chosen.name,emoji:chosen.emoji,meal:chosen.meal,date:dayKey() });
+        state.history = state.history.slice(0,100);
+        save();
+        refreshDate();
+        renderHistory();
+        $('confirm-button').disabled = true;
+        $('confirm-button').textContent = '已记下，开饭吧 ✓';
+        $('result-status').textContent = '今日美味已确认';
+        toast(storageAvailable ? '记下啦，祝你这一餐吃得开心！' : '记下啦！浏览器未允许保存，关闭页面后记录会丢失。');
+      });
+      $('add-form').addEventListener('submit',event => {
+        event.preventDefault();
+        if (spinning) return;
+        const name = $('add-input').value.trim();
+        const foods = state.menus[state.meal];
+        if (!name) { toast('先写下一个想吃的美食吧'); $('add-input').focus(); return; }
+        if (foods.length >= 12) { toast('最多放 12 个选项，先移除一个吧'); return; }
+        if (foods.some(food => food.name === name)) { toast('这道美味已经在菜单里啦'); $('add-input').focus(); return; }
+        const known = Object.values(DEFAULTS).flat().find(food => food.name === name);
+        foods.push(known ? {...known} : { name:name.slice(0,12),emoji:'🍽️',description:'是你亲手放进菜单的美味。今天，就听自己的胃一次。' });
+        $('add-input').value = '';
+        updateCandidates();
+        toast(storageAvailable ? `${name}，已经加入转盘！` : '已加入转盘；当前浏览器无法保存菜单。');
+        if (!$('add-input').disabled) $('add-input').focus();
+      });
+      $('reset-menu').addEventListener('click',() => {
+        if (spinning) return;
+        state.menus[state.meal] = clone(DEFAULTS[state.meal]);
+        $('add-input').value = '';
+        updateCandidates();
+        toast(`已恢复默认${MEALS[state.meal]}菜单`);
+      });
+      document.addEventListener('visibilitychange',() => { if (!document.hidden) refreshDate(); });
+      load();
+      renderMenu();
+      drawWheel();
+      refreshDate();
+      setInterval(refreshDate,30000);
+    })();
+  </script>
+</body>
+</html>
